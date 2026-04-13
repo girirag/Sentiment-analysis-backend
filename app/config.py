@@ -23,6 +23,24 @@ class Settings(BaseSettings):
     api_host: str = Field(default="0.0.0.0")
     api_port: int = Field(default=8000)
     
+    # Environment
+    environment: str = Field(default="production")
+    debug: bool = Field(default=False)
+    
+    # Twitter API (optional)
+    twitter_api_key: str = Field(default="")
+    twitter_api_secret: str = Field(default="")
+    twitter_bearer_token: str = Field(default="")
+    twitter_access_token: str = Field(default="")
+    twitter_access_token_secret: str = Field(default="")
+    
+    # YouTube API (optional)
+    youtube_api_key: str = Field(default="")
+    
+    # Google Translate API (optional)
+    google_translate_api_key: str = Field(default="")
+    google_cloud_project_id: str = Field(default="sentiment-analysis-tamil")
+    
     class Config:
         env_file = ".env"
         populate_by_name = True

@@ -124,85 +124,119 @@ class SentimentAnalyzer:
     
     async def analyze_segments(self, segments: List[TranscriptionSegment]) -> List[SentimentResult]:
         """
-        Analyze sentiment for multiple transcription segments
-        
-        Args:
-            segments: List of transcription segments
-            
-        Returns:
-            List of sentiment results
+        Analyze sentiment for multiple transcription segments in a single batch.
         """
+        if not segments:
+            return []
+
+        texts = [seg.text[:512] if seg.text and seg.text.strip() else " " for seg in segments]
+
+        try:
+            # Run entire batch in one pipeline call
+            batch_results = self.pipeline(texts, batch_size=32, truncation=True)
+        except Exception as e:
+            logger.error(f"Batch sentiment analysis failed: {e}")
+            batch_results = [None] * len(texts)
+
         results = []
-        
-        for segment in segments:
-            result = await self.analyze(segment.text)
-            result.timestamp = segment.start
-            results.append(result)
-        
+        for seg, preds in zip(segments, batch_results):
+            if preds is None:
+                results.append(SentimentResult(sentiment="neutral", score=0.0, confidence=0.0, timestamp=seg.start))
+                continue
+            best = max(preds, key=lambda x: x["score"])
+            norm = self._normalize_score(best["label"], best["score"])
+            results.append(SentimentResult(
+                sentiment=self._classify_sentiment(norm),
+                score=norm,
+                confidence=best["score"],
+                timestamp=seg.start,
+            ))
         return results
     
-    async def create_timeline(
-        self, 
+    async def _create_timeline_async(
+        self,
         segments: List[TranscriptionSegment],
         window_duration: float = 10.0
     ) -> List[TimelinePoint]:
         """
-        Create sentiment timeline with fixed time windows
-        
-        Args:
-            segments: List of transcription segments
-            window_duration: Duration of each time window in seconds (5-10 seconds)
-            
-        Returns:
-            List of timeline points
+        Create sentiment timeline with fixed time windows using a single batch call.
         """
         if not segments:
             return []
-        
-        # Ensure window duration is between 5 and 10 seconds
+
         window_duration = max(5.0, min(10.0, window_duration))
-        
-        # Get total duration
         max_time = max(seg.end for seg in segments)
-        
-        # Create time windows
+
+        # Build all windows first
+        windows = []
+        t = 0.0
+        while t < max_time:
+            window_end = t + window_duration
+            window_segs = [s for s in segments if s.start < window_end and s.end > t]
+            text = " ".join(s.text for s in window_segs).strip() if window_segs else ""
+            windows.append((t, text))
+            t = window_end
+
+        # Batch-analyse all non-empty windows in one pipeline call
+        texts = [text[:512] if text else " " for _, text in windows]
+        try:
+            batch_results = self.pipeline(texts, batch_size=32, truncation=True)
+        except Exception as e:
+            logger.error(f"Batch timeline sentiment failed: {e}")
+            batch_results = [None] * len(texts)
+
         timeline = []
-        current_time = 0.0
-        
-        while current_time < max_time:
-            window_end = current_time + window_duration
-            
-            # Find segments in this window
-            window_segments = [
-                seg for seg in segments
-                if seg.start < window_end and seg.end > current_time
-            ]
-            
-            if window_segments:
-                # Combine text from all segments in window
-                combined_text = " ".join(seg.text for seg in window_segments)
-                
-                # Analyze sentiment
-                result = await self.analyze(combined_text)
-                
-                timeline.append(TimelinePoint(
-                    timestamp=current_time,
-                    sentiment=result.sentiment,
-                    score=result.score
-                ))
-            else:
-                # No segments in this window, use neutral
-                timeline.append(TimelinePoint(
-                    timestamp=current_time,
-                    sentiment="neutral",
-                    score=0.0
-                ))
-            
-            current_time = window_end
-        
+        for (timestamp, _), preds in zip(windows, batch_results):
+            if preds is None:
+                timeline.append(TimelinePoint(timestamp=timestamp, sentiment="neutral", score=0.0))
+                continue
+            best = max(preds, key=lambda x: x["score"])
+            norm = self._normalize_score(best["label"], best["score"])
+            timeline.append(TimelinePoint(
+                timestamp=timestamp,
+                sentiment=self._classify_sentiment(norm),
+                score=norm,
+            ))
+
         return timeline
     
-    def calculate_summary(self, timeline: List[TimelinePoint]) -> dict:
+    def analyze_text(self, text: str) -> dict:
+        """
+        Synchronous wrapper around analyze() for testing and simple use cases.
+
+        Returns:
+            dict with keys: sentiment, score, confidence
+        """
+        import asyncio
+        result = asyncio.run(self.analyze(text))
+        return {
+            "sentiment": result.sentiment,
+            "score": result.score,
+            "confidence": result.confidence,
+        }
+
+    def create_timeline(self, segments: list, window_duration: float = 10.0):
+        """
+        Accepts either plain dicts (sync test usage) or TranscriptionSegment objects.
+        Runs the async pipeline synchronously.
+        """
+        import asyncio
+        from app.models.schemas import TranscriptionSegment
+
+        seg_objs = []
+        for s in segments:
+            if isinstance(s, TranscriptionSegment):
+                seg_objs.append(s)
+            else:
+                seg_objs.append(TranscriptionSegment(text=s["text"], start=s["start"], end=s["end"]))
+
+        async def _run():
+            return await self._create_timeline_async(seg_objs, window_duration)
+
+        timeline = asyncio.run(_run())
+        return [{"timestamp": p.timestamp, "sentiment": p.sentiment, "score": p.score} for p in timeline]
+
+
         """
         Calculate summary statistics from timeline
         

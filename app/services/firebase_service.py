@@ -32,16 +32,28 @@ class FirebaseService:
         try:
             # Check if already initialized
             if not firebase_admin._apps:
-                cred_path = os.getenv("FIREBASE_CREDENTIALS_PATH", "./firebase-key.json")
+                # Try to get credentials from environment variable first (for Render/cloud deployment)
+                firebase_creds_json = os.getenv("FIREBASE_CREDENTIALS")
                 
-                if not os.path.exists(cred_path):
-                    logger.warning(f"Firebase credentials not found at {cred_path}. Firebase features will be disabled.")
-                    # Don't initialize Firebase if credentials are missing
-                    self.db = None
-                    self.bucket = None
-                    return
-                
-                cred = credentials.Certificate(cred_path)
+                if firebase_creds_json:
+                    # Parse JSON from environment variable
+                    import json
+                    cred_dict = json.loads(firebase_creds_json)
+                    cred = credentials.Certificate(cred_dict)
+                    logger.info("Using Firebase credentials from environment variable")
+                else:
+                    # Fall back to file path
+                    cred_path = os.getenv("FIREBASE_CREDENTIALS_PATH", "./firebase-key.json")
+                    
+                    if not os.path.exists(cred_path):
+                        logger.warning(f"Firebase credentials not found at {cred_path}. Firebase features will be disabled.")
+                        # Don't initialize Firebase if credentials are missing
+                        self.db = None
+                        self.bucket = None
+                        return
+                    
+                    cred = credentials.Certificate(cred_path)
+                    logger.info(f"Using Firebase credentials from file: {cred_path}")
                 
                 firebase_admin.initialize_app(cred, {
                     'storageBucket': os.getenv("FIREBASE_STORAGE_BUCKET")
@@ -301,6 +313,143 @@ class FirebaseService:
             logger.error(f"Failed to generate signed URL: {str(e)}")
             raise
     
+    # ==================== Clip Jobs Operations ====================
+
+    async def create_clip_job(
+        self,
+        job_id: str,
+        video_id: str,
+        user_id: str,
+        similarity_threshold: float,
+    ) -> None:
+        """
+        Create a new clip job document in Firestore
+
+        Args:
+            job_id: Unique job identifier (UUID)
+            video_id: The ID of the video being processed
+            user_id: The ID of the user who initiated the job
+            similarity_threshold: Minimum similarity score for matches
+        """
+        try:
+            doc_data = {
+                "job_id": job_id,
+                "video_id": video_id,
+                "user_id": user_id,
+                "status": "queued",
+                "similarity_threshold": similarity_threshold,
+                "clip_ids": [],
+                "error": None,
+                "created_at": firestore.SERVER_TIMESTAMP,
+                "updated_at": firestore.SERVER_TIMESTAMP,
+            }
+            self.db.collection("clip_jobs").document(job_id).set(doc_data)
+            logger.info(f"Created clip job: {job_id}")
+        except Exception as e:
+            logger.error(f"Failed to create clip job: {str(e)}")
+            raise
+
+    async def update_clip_job(self, job_id: str, updates: Dict[str, Any]) -> None:
+        """
+        Update fields on a clip job document
+
+        Args:
+            job_id: The clip job ID
+            updates: Dictionary of fields to update (e.g. status, clip_ids, error)
+        """
+        try:
+            updates["updated_at"] = firestore.SERVER_TIMESTAMP
+            self.db.collection("clip_jobs").document(job_id).update(updates)
+            logger.info(f"Updated clip job {job_id}: {list(updates.keys())}")
+        except Exception as e:
+            logger.error(f"Failed to update clip job: {str(e)}")
+            raise
+
+    async def get_clip_job(self, job_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a clip job document from Firestore
+
+        Args:
+            job_id: The clip job ID
+
+        Returns:
+            Clip job data dictionary or None if not found
+        """
+        try:
+            doc = self.db.collection("clip_jobs").document(job_id).get()
+            if doc.exists:
+                return doc.to_dict()
+            logger.warning(f"Clip job not found: {job_id}")
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get clip job: {str(e)}")
+            raise
+
+    # ==================== Clip Results Operations ====================
+
+    async def create_clip_result(self, clip_result: Dict[str, Any]) -> None:
+        """
+        Create a clip result document in Firestore using clip_id as the document ID
+
+        Args:
+            clip_result: Dictionary containing clip result fields (must include 'clip_id')
+        """
+        try:
+            clip_id = clip_result["clip_id"]
+            doc_data = dict(clip_result)
+            doc_data["created_at"] = firestore.SERVER_TIMESTAMP
+            self.db.collection("clip_results").document(clip_id).set(doc_data)
+            logger.info(f"Created clip result: {clip_id}")
+        except Exception as e:
+            logger.error(f"Failed to create clip result: {str(e)}")
+            raise
+
+    async def get_clip_results_for_video(self, video_id: str) -> List[Dict[str, Any]]:
+        """
+        Get all clip results for a video, ordered by start_time ascending
+
+        Args:
+            video_id: The video ID
+
+        Returns:
+            List of clip result documents ordered by start_time
+        """
+        try:
+            query = (
+                self.db.collection("clip_results")
+                .where("video_id", "==", video_id)
+                .order_by("start_time")
+            )
+            docs = query.stream()
+            results = []
+            for doc in docs:
+                data = doc.to_dict()
+                results.append(data)
+            return results
+        except Exception as e:
+            logger.error(f"Failed to get clip results for video {video_id}: {str(e)}")
+            raise
+
+    async def get_clip_result(self, clip_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a single clip result document from Firestore
+
+        Args:
+            clip_id: The clip ID
+
+        Returns:
+            Clip result data dictionary or None if not found
+        """
+        try:
+            doc = self.db.collection("clip_results").document(clip_id).get()
+            if doc.exists:
+                return doc.to_dict()
+            logger.warning(f"Clip result not found: {clip_id}")
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get clip result: {str(e)}")
+            raise
+
     # ==================== Authentication Operations ====================
     
     async def verify_token(self, token: str) -> Dict[str, Any]:

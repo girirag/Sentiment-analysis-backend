@@ -28,6 +28,8 @@ services:
         value: production
       - key: DEBUG
         value: false
+      - key: FRONTEND_URL
+        value: https://sentiment-analysis-frontend.vercel.app
       # These need to be set manually in Render dashboard:
       # - FIREBASE_CREDENTIALS_PATH
       # - FIREBASE_STORAGE_BUCKET

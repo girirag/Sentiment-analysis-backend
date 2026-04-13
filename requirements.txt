@@ -20,10 +20,15 @@ opencv-python==4.9.0.80
 openai-whisper==20231117
 
 # NLP and sentiment analysis
+sentence-transformers==2.7.0
 transformers==4.37.2
 torch==2.2.0
 scikit-learn==1.4.0
 nltk==3.8.1
+
+# Translation
+google-cloud-translate==3.14.0
+langdetect==1.0.9
 
 # WebSocket
 websockets==12.0
@@ -38,3 +43,13 @@ pytest-cov==4.1.0
 pytest-mock==3.12.0
 hypothesis==6.92.1
 httpx==0.25.2
+
+# Twitter API
+tweepy==4.14.0
+
+# YouTube API
+google-api-python-client==2.108.0
+yt-dlp==2023.11.16
+
+# HTTP requests
+requests==2.31.0

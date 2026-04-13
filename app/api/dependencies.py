@@ -2,6 +2,8 @@
 from fastapi import Header, HTTPException, status
 from typing import Optional, Dict, Any
 from app.services.firebase_service import firebase_service
+from app.config import settings
+import os
 
 async def verify_auth_token(authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
     """
@@ -16,6 +18,15 @@ async def verify_auth_token(authorization: Optional[str] = Header(None)) -> Dict
     Raises:
         HTTPException: If token is missing or invalid
     """
+    # Development mode bypass
+    if os.getenv("ENVIRONMENT") == "development" or settings.debug:
+        if not authorization or authorization == "Bearer dev-token":
+            return {
+                "uid": "dev-user-123",
+                "email": "dev@example.com",
+                "name": "Development User"
+            }
+    
     if not authorization:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
