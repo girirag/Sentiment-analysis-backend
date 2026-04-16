@@ -7,10 +7,10 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# Use /code as workdir to avoid confusion with the 'app' package name
+WORKDIR /code
 
-# Set PYTHONPATH so app.* imports resolve correctly
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/code
 
 RUN pip install --upgrade pip setuptools wheel packaging
 
