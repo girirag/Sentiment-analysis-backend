@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Upgrade pip + setuptools first
-RUN pip install --upgrade pip setuptools wheel
+# Upgrade pip + setuptools first (pkg_resources comes from setuptools)
+RUN pip install --upgrade pip setuptools wheel packaging
 
 # Install CPU-only torch (must be before other ML packages)
 RUN pip install --no-cache-dir \

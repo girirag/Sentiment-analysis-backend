@@ -16,9 +16,8 @@ redis==5.0.1
 ffmpeg-python==0.2.0
 opencv-python-headless==4.9.0.80
 
-# Audio transcription — pin to avoid rust/triton deps
-openai-whisper==20231117
-numba==0.59.1
+# Audio transcription — faster-whisper avoids openai-whisper build issues
+faster-whisper==1.0.3
 
 # NLP — torch installed separately in Dockerfile
 sentence-transformers==2.7.0
