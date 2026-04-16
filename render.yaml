@@ -1,17 +1,17 @@
 services:
-  # Web Service (FastAPI Backend)
   - type: web
     name: video-sentiment-backend
-    env: python
+    env: docker
+    dockerfilePath: ./Dockerfile
     region: oregon
     plan: starter
     branch: main
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: false
       - key: WHISPER_MODEL
         value: base
       - key: SENTIMENT_MODEL
@@ -20,44 +20,12 @@ services:
         value: 500
       - key: STREAM_CHUNK_DURATION
         value: 10
-      - key: API_HOST
-        value: 0.0.0.0
-      - key: API_PORT
-        value: 8000
-      - key: ENVIRONMENT
-        value: production
-      - key: DEBUG
-        value: false
       - key: FRONTEND_URL
         value: https://sentiment-analysis-frontend.vercel.app
-      # These need to be set manually in Render dashboard:
-      # - FIREBASE_CREDENTIALS_PATH
-      # - FIREBASE_STORAGE_BUCKET
-      # - REDIS_URL
-
-  # Background Worker (Celery)
-  - type: worker
-    name: video-sentiment-worker
-    env: python
-    region: oregon
-    plan: starter
-    branch: main
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: celery -A app.tasks.celery_tasks worker --loglevel=info --pool=solo
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
-      - key: WHISPER_MODEL
-        value: base
-      - key: SENTIMENT_MODEL
-        value: distilbert-base-uncased-finetuned-sst-2-english
-      # These need to be set manually in Render dashboard:
-      # - FIREBASE_CREDENTIALS_PATH
-      # - FIREBASE_STORAGE_BUCKET
-      # - REDIS_URL
-
-databases:
-  # Redis Instance
-  - name: video-sentiment-redis
-    plan: starter
-    region: oregon
+      # Set these manually in Render dashboard:
+      # FIREBASE_CREDENTIALS - paste firebase-key.json contents
+      # FIREBASE_STORAGE_BUCKET
+      # REDIS_URL - from Render Redis add-on
+      # YOUTUBE_API_KEY
+      # GOOGLE_TRANSLATE_API_KEY
+      # GOOGLE_CLOUD_PROJECT_ID
