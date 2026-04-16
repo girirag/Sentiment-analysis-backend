@@ -24,5 +24,6 @@ RUN python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords')"
 COPY . .
 
 RUN mkdir -p uploads
+RUN chmod +x start_worker.sh
 
-CMD ["celery", "-A", "app.tasks.celery_tasks:celery_app", "worker", "--loglevel=info", "--pool=solo"]
+CMD ["bash", "start_worker.sh"]
