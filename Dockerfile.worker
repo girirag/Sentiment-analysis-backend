@@ -19,7 +19,8 @@ RUN pip install --no-cache-dir \
 COPY requirements-prod.txt .
 RUN pip install --no-cache-dir -r requirements-prod.txt
 
-RUN python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords')"
+COPY download_nltk.py .
+RUN python download_nltk.py
 
 COPY . .
 
