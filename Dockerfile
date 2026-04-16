@@ -11,20 +11,20 @@ WORKDIR /app
 
 RUN pip install --upgrade pip setuptools wheel packaging
 
-# Install CPU-only torch first (avoids CUDA bloat)
+# Install CPU-only torch first
 RUN pip install --no-cache-dir \
     "torch==2.2.0+cpu" \
     "torchaudio==2.2.0+cpu" \
     --extra-index-url https://download.pytorch.org/whl/cpu
 
-# Install remaining dependencies
+# Copy and install dependencies
 COPY requirements-prod.txt .
 RUN pip install --no-cache-dir -r requirements-prod.txt
 
-# Copy app code
+# Copy all app code
 COPY . .
 
-# Download NLTK data using a script (avoids shell quoting issues)
+# Download NLTK data
 RUN python download_nltk.py
 
 RUN mkdir -p uploads
