@@ -9,6 +9,9 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+# Set PYTHONPATH so app.* imports resolve correctly
+ENV PYTHONPATH=/app
+
 RUN pip install --upgrade pip setuptools wheel packaging
 
 # Install CPU-only torch first
