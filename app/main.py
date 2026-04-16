@@ -37,14 +37,13 @@ origins = [
     "http://127.0.0.1:5174",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    # Production Vercel frontend
+    "https://sentiment-analysis-frontend-ivory.vercel.app",
 ]
 
-# Add production frontend URL from env var (set in Render dashboard)
-if FRONTEND_URL:
+# Add any additional frontend URL from env var
+if FRONTEND_URL and FRONTEND_URL not in origins:
     origins.append(FRONTEND_URL)
-    # Also allow all vercel preview URLs for the same project
-    if "vercel.app" in FRONTEND_URL:
-        origins.append("https://*.vercel.app")
 
 app.add_middleware(
     CORSMiddleware,
