@@ -63,7 +63,7 @@ tmp/
 # ML Models (downloaded at runtime)
 *.pt
 *.pth
-models/
+# models/  # commented out — app/models/ is source code, not ML model files
 
 # Media files
 uploads/
