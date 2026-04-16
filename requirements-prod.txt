@@ -1,0 +1,49 @@
+# FastAPI and server
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+pydantic>=2.7.0
+pydantic-settings>=2.1.0
+
+# Firebase
+firebase-admin==6.4.0
+
+# Celery and Redis
+celery==5.3.6
+redis==5.0.1
+
+# Video processing (headless — no GUI deps)
+ffmpeg-python==0.2.0
+opencv-python-headless==4.9.0.80
+
+# Audio transcription
+openai-whisper==20231117
+
+# NLP and sentiment analysis — CPU-only torch to keep size manageable
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.2.0+cpu
+sentence-transformers==2.7.0
+transformers==4.37.2
+scikit-learn==1.4.0
+nltk==3.8.1
+
+# Translation
+google-cloud-translate>=3.14.0
+langdetect==1.0.9
+
+# WebSocket
+websockets==12.0
+
+# Utilities
+python-dotenv==1.0.0
+
+# YouTube API
+google-api-python-client==2.108.0
+yt-dlp==2023.11.16
+
+# Twitter API
+tweepy==4.14.0
+
+# HTTP requests
+requests==2.31.0
+httpx==0.25.2
