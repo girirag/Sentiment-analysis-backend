@@ -12,20 +12,20 @@ firebase-admin==6.4.0
 celery==5.3.6
 redis==5.0.1
 
-# Video processing (headless — no GUI deps)
+# Video processing (headless — no GUI)
 ffmpeg-python==0.2.0
 opencv-python-headless==4.9.0.80
 
-# Audio transcription
+# Audio transcription — pin to avoid rust/triton deps
 openai-whisper==20231117
+numba==0.59.1
 
-# NLP and sentiment analysis — CPU-only torch to keep size manageable
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.2.0+cpu
+# NLP — torch installed separately in Dockerfile
 sentence-transformers==2.7.0
 transformers==4.37.2
 scikit-learn==1.4.0
 nltk==3.8.1
+huggingface-hub>=0.20.0
 
 # Translation
 google-cloud-translate>=3.14.0

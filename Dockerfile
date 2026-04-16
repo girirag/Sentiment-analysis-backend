@@ -1,23 +1,25 @@
 FROM python:3.11-slim
 
-# System deps — ffmpeg for audio extraction, build tools for some wheels
+# System deps
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     gcc \
     g++ \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Upgrade pip first
-RUN pip install --upgrade pip
+# Upgrade pip + setuptools first
+RUN pip install --upgrade pip setuptools wheel
 
-# Install CPU-only torch separately first (avoids pulling CUDA variant)
+# Install CPU-only torch (must be before other ML packages)
 RUN pip install --no-cache-dir \
-    torch==2.2.0+cpu \
+    "torch==2.2.0+cpu" \
+    "torchaudio==2.2.0+cpu" \
     --extra-index-url https://download.pytorch.org/whl/cpu
 
-# Copy and install remaining prod dependencies
+# Install remaining prod dependencies
 COPY requirements-prod.txt .
 RUN pip install --no-cache-dir -r requirements-prod.txt
 
@@ -27,7 +29,6 @@ RUN python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords')"
 # Copy application code
 COPY . .
 
-# Create uploads directory
 RUN mkdir -p uploads
 
 EXPOSE 8000
